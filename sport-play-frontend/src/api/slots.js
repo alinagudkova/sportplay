@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE = 'http://localhost:3000/api'
+const BASE = '/api'
 
 export const getSlots = () => axios.get(`${BASE}/slots`)
 export const bookSlot = (slot_id, token) => axios.post(
