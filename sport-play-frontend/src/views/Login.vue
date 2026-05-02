@@ -1,5 +1,24 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+
+const router = useRouter()
+const authStore = useAuthStore()
+
+const email = ref('')
+const password = ref('')
+const error = ref('')
+
+const login = async () => {
+  try {
+    error.value = ''
+    await authStore.login(email.value, password.value)
+    router.push('/')
+  } catch (err) {
+    error.value = err.response?.data?.error || 'Ошибка входа'
+  }
+}
 
 onMounted(() => {
   const script = document.createElement('script')
