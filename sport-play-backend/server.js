@@ -34,22 +34,20 @@ app.get('/api/slots', async (req, res) => {
 // ===== BOOK (AUTH REQUIRED) =====
 app.post('/api/book', authMiddleware, async (req, res) => {
   const { slot_id } = req.body;
-  const client_name = req.user.name;
 
   if (!slot_id)
     return res.status(400).json({ error: 'slot_id обязателен' });
 
   try {
     await db.query(
-      `INSERT INTO bookings (slot_id, client_name)
-       VALUES (?, ?)`,
-      [slot_id, client_name]
+      `INSERT INTO bookings (slot_id, user_id, client_name)
+       VALUES (?, ?, ?)`,
+      [slot_id, req.user.id, req.user.name]
     );
     res.json({ message: 'Вы записаны' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-  
 });
 app.get('/api/sports', async (req, res) => {
   try {
@@ -117,6 +115,26 @@ app.get('/api/slots/:id/participants', async (req, res) => {
       WHERE b.slot_id = ? AND b.status = 'active'
     `, [req.params.id])
     res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/profile', authMiddleware, async (req, res) => {
+  try {
+    const [bookings] = await db.query(`
+      SELECT b.id, b.status, b.created_at,
+        s.date, s.time,
+        h.name as hall_name, h.address,
+        sp.name as sport_name, sp.image_url as sport_image
+      FROM bookings b
+      JOIN slots s ON b.slot_id = s.id
+      JOIN halls h ON s.hall_id = h.id
+      JOIN sports sp ON h.sport_id = sp.id
+      WHERE b.user_id = ?
+      ORDER BY s.date DESC, s.time DESC
+    `, [req.user.id])
+    res.json(bookings)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
