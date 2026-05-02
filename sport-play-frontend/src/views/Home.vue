@@ -1,3 +1,20 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useSportsStore } from '../stores/sports'
+import { storeToRefs } from 'pinia'
+
+const sportsStore = useSportsStore()
+const { sports } = storeToRefs(sportsStore)
+const sportsSection = ref(null)
+
+onMounted(async () => {
+  await sportsStore.fetchSports()
+})
+
+const scrollToSports = () => {
+  sportsSection.value.scrollIntoView({ behavior: 'smooth' })
+}
+</script>
 <template>
   <div class="page">
 
@@ -32,22 +49,6 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
-
-const sports = ref([])
-const sportsSection = ref(null)
-
-onMounted(async () => {
-  const res = await axios.get('http://localhost:3000/api/sports')
-  sports.value = res.data
-})
-
-const scrollToSports = () => {
-  sportsSection.value.scrollIntoView({ behavior: 'smooth' })
-}
-</script>
 
 <style scoped>
 .page {
