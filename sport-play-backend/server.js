@@ -76,5 +76,50 @@ app.get('/api/sports/:id/halls', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+app.get('/api/halls/:id', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT h.*, s.name as sport_name 
+      FROM halls h
+      JOIN sports s ON h.sport_id = s.id
+      WHERE h.id = ?
+    `, [req.params.id])
+    res.json(rows[0])
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/halls/:id/slots', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT s.*, 
+        COUNT(b.id) as booked_count,
+        s.max_participants
+      FROM slots s
+      LEFT JOIN bookings b ON b.slot_id = s.id AND b.status = 'active'
+      WHERE s.hall_id = ?
+      GROUP BY s.id
+      ORDER BY s.date, s.time
+    `, [req.params.id])
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/slots/:id/participants', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT u.name, u.avatar_url
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      WHERE b.slot_id = ? AND b.status = 'active'
+    `, [req.params.id])
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
