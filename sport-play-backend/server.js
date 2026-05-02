@@ -59,6 +59,22 @@ app.get('/api/sports', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+app.get('/api/sports/:id', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM sports WHERE id = ?', [req.params.id])
+    res.json(rows[0])
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
+app.get('/api/sports/:id/halls', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM halls WHERE sport_id = ?', [req.params.id])
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
