@@ -1,24 +1,28 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { ref, onMounted } from 'vue'
 
-const router = useRouter()
-const authStore = useAuthStore()
-
-const email = ref('')
-const password = ref('')
-const error = ref('')
-
-const login = async () => {
-  try {
-    error.value = ''
-    await authStore.login(email.value, password.value)
-    router.push('/')
-  } catch (err) {
-    error.value = err.response?.data?.error || 'Ошибка входа'
+onMounted(() => {
+  const script = document.createElement('script')
+  script.src = 'https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js'
+  script.onload = () => {
+    if ('VKIDSDK' in window) {
+      const VKID = window.VKIDSDK
+      VKID.Config.init({
+        app: 54575533,
+        redirectUrl: 'https://sportplay.458000.ru/auth/vk/callback',
+        responseMode: VKID.ConfigResponseMode.Redirect,
+        source: VKID.ConfigSource.LOWCODE,
+        scope: '',
+      })
+      const floatingOneTap = new VKID.FloatingOneTap()
+      floatingOneTap.render({
+        appName: 'Sport Play',
+        showAlternativeLogin: false
+      })
+    }
   }
-}
+  document.head.appendChild(script)
+})
 </script>
 
 <template>
