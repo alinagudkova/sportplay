@@ -46,7 +46,7 @@ const selectSlot = async (slot) => {
     return
   }
   selectedSlot.value = slot
-  const res = await axios.get(`http://localhost:3000/api/slots/${slot.id}/participants`)
+  const res = await axios.get(`/api/slots/${slot.id}/participants`)
   participants.value = res.data
 }
 
