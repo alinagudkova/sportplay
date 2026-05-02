@@ -14,7 +14,7 @@ const halls = ref([])
 
 onMounted(async () => {
   await sportsStore.fetchSport(route.params.id)
-  const res = await axios.get(`http://localhost:3000/api/sports/${route.params.id}/halls`)
+  const res = await axios.get(`/api/sports/${route.params.id}/halls`)
   halls.value = res.data
 })
 </script>

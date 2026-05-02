@@ -16,7 +16,7 @@ onMounted(async () => {
     router.push('/login')
     return
   }
-  const res = await axios.get('http://localhost:3000/api/profile', {
+  const res = await axios.get('/api/profile', {
     headers: { Authorization: `Bearer ${token.value}` }
   })
   bookings.value = res.data

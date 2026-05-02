@@ -18,26 +18,26 @@ const showAuth = ref(false)
 
 onMounted(async () => {
   const [hallRes, slotsRes] = await Promise.all([
-    axios.get(`http://localhost:3000/api/halls/${route.params.id}`),
-    axios.get(`http://localhost:3000/api/halls/${route.params.id}/slots`)
+    axios.get(`/api/halls/${route.params.id}`),
+    axios.get(`/api/halls/${route.params.id}/slots`)
   ])
   hall.value = hallRes.data
   slots.value = slotsRes.data
   if (hallRes.data.latitude && hallRes.data.longitude) {
-  setTimeout(() => {
-    ymaps.ready(() => {
-      const map = new ymaps.Map('map', {
-        center: [hallRes.data.latitude, hallRes.data.longitude],
-        zoom: 15
+    setTimeout(() => {
+      ymaps.ready(() => {
+        const map = new ymaps.Map('map', {
+          center: [hallRes.data.latitude, hallRes.data.longitude],
+          zoom: 15
+        })
+        map.geoObjects.add(new ymaps.Placemark(
+          [hallRes.data.latitude, hallRes.data.longitude],
+          { balloonContent: hallRes.data.name },
+          { preset: 'islands#redDotIcon' }
+        ))
       })
-      map.geoObjects.add(new ymaps.Placemark(
-        [hallRes.data.latitude, hallRes.data.longitude],
-        { balloonContent: hallRes.data.name },
-        { preset: 'islands#redDotIcon' }
-      ))
-    })
-  }, 500)
-}
+    }, 500)
+  }
 })
 
 const selectSlot = async (slot) => {
@@ -53,13 +53,13 @@ const selectSlot = async (slot) => {
 const bookSlot = async () => {
   try {
     await axios.post(
-      'http://localhost:3000/api/book',
+      '/api/book',
       { slot_id: selectedSlot.value.id },
       { headers: { Authorization: `Bearer ${token.value}` } }
     )
     alert('Вы записаны!')
     selectedSlot.value = null
-    const res = await axios.get(`http://localhost:3000/api/halls/${route.params.id}/slots`)
+    const res = await axios.get(`/api/halls/${route.params.id}/slots`)
     slots.value = res.data
   } catch (err) {
     alert(err.response?.data?.error || 'Ошибка записи')
