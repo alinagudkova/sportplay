@@ -1,40 +1,44 @@
-<div>
-  <script nonce="csp_nonce" src="https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js"></script>
-  <script nonce="csp_nonce" type="text/javascript">
-    if ('VKIDSDK' in window) {
-      const VKID = window.VKIDSDK;
+<script setup>
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import axios from 'axios'
 
-      VKID.Config.init({
-        app: 54575533,
-        redirectUrl: 'https://sportplay.458000.ru/auth/vk/callback',
-        responseMode: VKID.ConfigResponseMode.Callback,
-        source: VKID.ConfigSource.LOWCODE,
-        scope: '', // Заполните нужными доступами по необходимости
-      });
+const router = useRouter()
+const authStore = useAuthStore()
 
-      const oneTap = new VKID.OneTap();
+onMounted(async () => {
+  const params = new URLSearchParams(window.location.search)
+  const code = params.get('code')
+  const deviceId = params.get('device_id')
 
-      oneTap.render({
-        container: document.currentScript.parentElement,
-        showAlternativeLogin: true
-      })
-      .on(VKID.WidgetEvents.ERROR, vkidOnError)
-      .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, function (payload) {
-        const code = payload.code;
-        const deviceId = payload.device_id;
-
-        VKID.Auth.exchangeCode(code, deviceId)
-          .then(vkidOnSuccess)
-          .catch(vkidOnError);
-      });
-    
-      function vkidOnSuccess(data) {
-        // Обработка полученного результата
-      }
-    
-      function vkidOnError(error) {
-        // Обработка ошибки
-      }
+  if (code && deviceId) {
+    try {
+      const res = await axios.post('/api/auth/vk', { code, device_id: deviceId })
+      authStore.token.value = res.data.token
+      authStore.user.value = res.data.user
+      localStorage.setItem('token', res.data.token)
+      localStorage.setItem('user', JSON.stringify(res.data.user))
+      router.push('/')
+    } catch (err) {
+      router.push('/login')
     }
-  </script>
-</div>
+  }
+})
+</script>
+
+<template>
+  <div class="loading">Входим через ВКонтакте...</div>
+</template>
+
+<style scoped>
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 24px;
+  color: #666;
+  font-family: system-ui;
+}
+</style>
