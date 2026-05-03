@@ -17,11 +17,9 @@ onMounted(async () => {
   if (code && deviceId) {
     try {
       const res = await axios.post('/api/auth/vk', { code, device_id: deviceId })
-      authStore.token.value = res.data.token
-      authStore.user.value = res.data.user
       localStorage.setItem('token', res.data.token)
-      localStorage.setItem('user', JSON.stringify(res.data.user))
-      router.push('/')
+localStorage.setItem('user', JSON.stringify(res.data.user))
+window.location.href = '/'
     } catch (err) {
       console.error(err)
       router.push('/login')
