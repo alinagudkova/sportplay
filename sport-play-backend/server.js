@@ -139,5 +139,56 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+app.post('/api/auth/vk', async (req, res) => {
+  const { code, device_id } = req.body
+
+  try {
+    const response = await require('axios').post(
+      'https://id.vk.com/oauth2/auth',
+      new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        device_id,
+        client_id: '54575533',
+        redirect_uri: 'https://sportplay.458000.ru/auth/vk/callback'
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    )
+
+    const { access_token } = response.data
+
+    const userInfo = await require('axios').get(
+      'https://id.vk.com/oauth2/user_info',
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    )
+
+    const vkUser = userInfo.data.user
+    const vkId = String(vkUser.user_id)
+    const name = `${vkUser.first_name} ${vkUser.last_name}`
+
+    let [users] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
+    let user = users[0]
+
+    if (!user) {
+      await db.query(
+        'INSERT INTO users (name, vk_id) VALUES (?, ?)',
+        [name, vkId]
+      )
+      const [newUsers] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
+      user = newUsers[0]
+    }
+
+    const token = require('jsonwebtoken').sign(
+      { id: user.id, name: user.name },
+      'sportplay_secret',
+      { expiresIn: '7d' }
+    )
+
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email } })
+  } catch (err) {
+    console.error(err.response?.data || err.message)
+    res.status(500).json({ error: 'Ошибка VK авторизации' })
+  }
+})
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
