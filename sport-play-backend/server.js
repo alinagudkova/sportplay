@@ -2,6 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const db = require('./db');
+const axios = require('axios');
+const jwt = require('jsonwebtoken');
 
 const { router: authRouter, authMiddleware } = require('./auth');
 
@@ -31,17 +33,13 @@ app.get('/api/slots', async (req, res) => {
   }
 });
 
-// ===== BOOK (AUTH REQUIRED) =====
+// ===== BOOK =====
 app.post('/api/book', authMiddleware, async (req, res) => {
   const { slot_id } = req.body;
-
-  if (!slot_id)
-    return res.status(400).json({ error: 'slot_id обязателен' });
-
+  if (!slot_id) return res.status(400).json({ error: 'slot_id обязателен' });
   try {
     await db.query(
-      `INSERT INTO bookings (slot_id, user_id, client_name)
-       VALUES (?, ?, ?)`,
+      `INSERT INTO bookings (slot_id, user_id, client_name) VALUES (?, ?, ?)`,
       [slot_id, req.user.id, req.user.name]
     );
     res.json({ message: 'Вы записаны' });
@@ -49,6 +47,8 @@ app.post('/api/book', authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ===== SPORTS =====
 app.get('/api/sports', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM sports')
@@ -57,6 +57,7 @@ app.get('/api/sports', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
 app.get('/api/sports/:id', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM sports WHERE id = ?', [req.params.id])
@@ -74,6 +75,8 @@ app.get('/api/sports/:id/halls', async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// ===== HALLS =====
 app.get('/api/halls/:id', async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -91,9 +94,7 @@ app.get('/api/halls/:id', async (req, res) => {
 app.get('/api/halls/:id/slots', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT s.*, 
-        COUNT(b.id) as booked_count,
-        s.max_participants
+      SELECT s.*, COUNT(b.id) as booked_count, s.max_participants
       FROM slots s
       LEFT JOIN bookings b ON b.slot_id = s.id AND b.status = 'active'
       WHERE s.hall_id = ?
@@ -120,6 +121,7 @@ app.get('/api/slots/:id/participants', async (req, res) => {
   }
 })
 
+// ===== PROFILE =====
 app.get('/api/profile', authMiddleware, async (req, res) => {
   try {
     const [bookings] = await db.query(`
@@ -139,11 +141,13 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// ===== VK AUTH =====
 app.post('/api/auth/vk', async (req, res) => {
   const { code, device_id } = req.body
 
   try {
-    const response = await require('axios').post(
+    const response = await axios.post(
       'https://id.vk.com/oauth2/auth',
       new URLSearchParams({
         grant_type: 'authorization_code',
@@ -155,38 +159,35 @@ app.post('/api/auth/vk', async (req, res) => {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     )
 
-    const { access_token } = response.data
+    console.log('VK response:', JSON.stringify(response.data))
 
-    const userInfo = await require('axios').get(
-  'https://api.vk.com/method/users.get',
-  { 
-    params: {
-      access_token,
-      fields: 'first_name,last_name',
-      v: '5.131'
-    }
-  }
-)
+    const { access_token, user_id } = response.data
+    const vkId = String(user_id)
 
-console.log('VK userInfo:', JSON.stringify(userInfo.data))
+    const userInfoRes = await axios.get('https://api.vk.com/method/users.get', {
+      params: {
+        user_ids: vkId,
+        fields: 'first_name,last_name',
+        access_token,
+        v: '5.131'
+      }
+    })
 
-const vkData = userInfo.data.response?.[0] || userInfo.data
-const vkId = String(vkData.id)
-const name = `${vkData.first_name} ${vkData.last_name}`
+    console.log('VK userInfo:', JSON.stringify(userInfoRes.data))
+
+    const vkData = userInfoRes.data.response?.[0]
+    const name = vkData ? `${vkData.first_name} ${vkData.last_name}` : 'VK пользователь'
 
     let [users] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
     let user = users[0]
 
     if (!user) {
-      await db.query(
-        'INSERT INTO users (name, vk_id) VALUES (?, ?)',
-        [name, vkId]
-      )
+      await db.query('INSERT INTO users (name, vk_id) VALUES (?, ?)', [name, vkId])
       const [newUsers] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
       user = newUsers[0]
     }
 
-    const token = require('jsonwebtoken').sign(
+    const token = jwt.sign(
       { id: user.id, name: user.name },
       'sportplay_secret',
       { expiresIn: '7d' }
@@ -194,9 +195,10 @@ const name = `${vkData.first_name} ${vkData.last_name}`
 
     res.json({ token, user: { id: user.id, name: user.name, email: user.email } })
   } catch (err) {
-    console.error(err.response?.data || err.message)
+    console.error('VK error:', err.response?.data || err.message)
     res.status(500).json({ error: 'Ошибка VK авторизации' })
   }
 })
+
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
