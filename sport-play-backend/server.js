@@ -158,14 +158,21 @@ app.post('/api/auth/vk', async (req, res) => {
     const { access_token } = response.data
 
     const userInfo = await require('axios').get(
-      'https://id.vk.com/oauth2/user_info',
-      { headers: { Authorization: `Bearer ${access_token}` } }
-    )
+  'https://api.vk.com/method/users.get',
+  { 
+    params: {
+      access_token,
+      fields: 'first_name,last_name',
+      v: '5.131'
+    }
+  }
+)
 
-    const vkUser = userInfo.data.user || userInfo.data
-    const vkId = String(vkUser.user_id || vkUser.id)
-    console.log('VK userInfo:', JSON.stringify(userInfo.data))
-    const name = `${vkUser.first_name} ${vkUser.last_name}`
+console.log('VK userInfo:', JSON.stringify(userInfo.data))
+
+const vkData = userInfo.data.response?.[0] || userInfo.data
+const vkId = String(vkData.id)
+const name = `${vkData.first_name} ${vkData.last_name}`
 
     let [users] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
     let user = users[0]
