@@ -162,8 +162,9 @@ app.post('/api/auth/vk', async (req, res) => {
       { headers: { Authorization: `Bearer ${access_token}` } }
     )
 
-    const vkUser = userInfo.data.user
-    const vkId = String(vkUser.user_id)
+    const vkUser = userInfo.data.user || userInfo.data
+    const vkId = String(vkUser.user_id || vkUser.id)
+    console.log('VK userInfo:', JSON.stringify(userInfo.data))
     const name = `${vkUser.first_name} ${vkUser.last_name}`
 
     let [users] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
