@@ -1,12 +1,18 @@
+<script setup>
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import axios from 'axios'
+
+const router = useRouter()
+const authStore = useAuthStore()
+
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
   const hashParams = new URLSearchParams(window.location.hash.slice(1))
   
   const code = params.get('code') || hashParams.get('code')
   const deviceId = params.get('device_id') || hashParams.get('device_id')
-
-  console.log('URL:', window.location.href)
-  console.log('code:', code, 'deviceId:', deviceId)
 
   if (code && deviceId) {
     try {
@@ -21,7 +27,23 @@ onMounted(async () => {
       router.push('/login')
     }
   } else {
-    console.log('Нет code или deviceId')
     router.push('/login')
   }
 })
+</script>
+
+<template>
+  <div class="loading">Входим через ВКонтакте...</div>
+</template>
+
+<style scoped>
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 24px;
+  color: #666;
+  font-family: system-ui;
+}
+</style>
