@@ -21,26 +21,21 @@ const login = async () => {
 }
 
 onMounted(() => {
-  const script = document.createElement('script')
-  script.src = 'https://unpkg.com/@vkid/sdk@<3.0.0/dist-sdk/umd/index.js'
-  script.onload = () => {
-    if ('VKIDSDK' in window) {
-      const VKID = window.VKIDSDK
-      VKID.Config.init({
-        app: 54575533,
-        redirectUrl: 'https://sportplay.458000.ru/auth/vk/callback',
-        responseMode: VKID.ConfigResponseMode.Redirect,
-        source: VKID.ConfigSource.LOWCODE,
-        scope: '',
-      })
-      const floatingOneTap = new VKID.FloatingOneTap()
-      floatingOneTap.render({
-        appName: 'Sport Play',
-        showAlternativeLogin: false
-      })
-    }
+  if ('VKIDSDK' in window) {
+    const VKID = window.VKIDSDK
+    VKID.Config.init({
+      app: 54575533,
+      redirectUrl: 'https://sportplay.458000.ru/auth/vk/callback',
+      responseMode: VKID.ConfigResponseMode.Redirect,
+      source: VKID.ConfigSource.LOWCODE,
+      scope: '',
+    })
+    const oneTap = new VKID.OneTap()
+    oneTap.render({
+      container: document.getElementById('vk-container'),
+      showAlternativeLogin: false
+    })
   }
-  document.head.appendChild(script)
 })
 </script>
 
@@ -55,6 +50,9 @@ onMounted(() => {
       <input v-model="password" placeholder="Пароль" type="password" />
 
       <button @click="login">Войти</button>
+
+      <div class="divider">или</div>
+      <div id="vk-container"></div>
 
       <p class="link">
         Нет аккаунта?
@@ -126,6 +124,17 @@ button:hover { background: #c73652; }
   border-radius: 10px;
   margin-bottom: 16px;
   font-size: 14px;
+}
+
+.divider {
+  text-align: center;
+  color: #999;
+  margin: 20px 0;
+}
+
+#vk-container {
+  width: 100%;
+  margin-bottom: 10px;
 }
 
 .link {
