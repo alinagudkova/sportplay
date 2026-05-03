@@ -9,23 +9,27 @@ const authStore = useAuthStore()
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
-  const hashParams = new URLSearchParams(window.location.hash.slice(1))
   
-  const code = params.get('code') || hashParams.get('code')
-  const deviceId = params.get('device_id') || hashParams.get('device_id')
+  const code = params.get('code')
+  const deviceId = params.get('device_id')
+  const state = params.get('state')
 
   if (code && deviceId) {
     try {
-      const res = await axios.post('/api/auth/vk', { code, device_id: deviceId })
+      const res = await axios.post('/api/auth/vk', { 
+        code, 
+        device_id: deviceId,
+        state
+      })
       localStorage.setItem('token', res.data.token)
-localStorage.setItem('user', JSON.stringify(res.data.user))
-window.location.href = '/'
+      localStorage.setItem('user', JSON.stringify(res.data.user))
+      window.location.href = '/'
     } catch (err) {
       console.error(err)
-      router.push('/login')
+      window.location.href = '/login'
     }
   } else {
-    router.push('/login')
+    window.location.href = '/login'
   }
 })
 </script>
