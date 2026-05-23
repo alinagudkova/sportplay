@@ -13,12 +13,21 @@ onMounted(async () => {
   const deviceId = params.get('device_id')
   const state = params.get('state')
 
+  // VK SDK сохраняет verifier в sessionStorage
+  const codeVerifier = sessionStorage.getItem('vkid_code_verifier') 
+    || localStorage.getItem('vkid_code_verifier')
+    || ''
+
+  console.log('code_verifier:', codeVerifier)
+  console.log('all sessionStorage:', JSON.stringify({...sessionStorage}))
+
   if (code && deviceId) {
     try {
       const res = await axios.post('/api/auth/vk', {
         code,
         device_id: deviceId,
-        state
+        state,
+        code_verifier: codeVerifier
       })
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('user', JSON.stringify(res.data.user))
