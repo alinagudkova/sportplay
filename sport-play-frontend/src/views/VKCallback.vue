@@ -9,15 +9,14 @@ const authStore = useAuthStore()
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
-  
   const code = params.get('code')
   const deviceId = params.get('device_id')
   const state = params.get('state')
 
   if (code && deviceId) {
     try {
-      const res = await axios.post('/api/auth/vk', { 
-        code, 
+      const res = await axios.post('/api/auth/vk', {
+        code,
         device_id: deviceId,
         state
       })
@@ -31,9 +30,10 @@ onMounted(async () => {
   } else {
     window.location.href = '/login'
   }
+})
   // В auth store при login и vk callback:
 localStorage.setItem('user', JSON.stringify({ ...userData, role: res.data.user.role }))
-})
+
 </script>
 
 <template>

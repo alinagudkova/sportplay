@@ -29,7 +29,7 @@ onMounted(() => {
       responseMode: VKID.ConfigResponseMode.Redirect,
       source: VKID.ConfigSource.LOWCODE,
       scope: '',
-      codeVerifier: true
+      codeVerifier: false
     })
     const oneTap = new VKID.OneTap()
     oneTap.render({

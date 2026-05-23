@@ -334,7 +334,7 @@ app.delete('/api/admin/bookings/:id', authMiddleware, async (req, res) => {
 
 // ===== VK AUTH =====
 app.post('/api/auth/vk', async (req, res) => {
-  const { code, device_id, state } = req.body
+  const { code, device_id } = req.body
 
   try {
     const response = await axios.post(
@@ -343,7 +343,6 @@ app.post('/api/auth/vk', async (req, res) => {
         grant_type: 'authorization_code',
         code,
         device_id,
-        state,
         client_id: '54575533',
         redirect_uri: 'https://sportplay.458000.ru/auth/vk/callback'
       }),
