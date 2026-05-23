@@ -31,6 +31,8 @@ onMounted(async () => {
   } else {
     window.location.href = '/login'
   }
+  // В auth store при login и vk callback:
+localStorage.setItem('user', JSON.stringify({ ...userData, role: res.data.user.role }))
 })
 </script>
 

@@ -20,6 +20,8 @@ const register = async () => {
     error.value = err.response?.data?.error || 'Ошибка регистрации'
   }
 }
+// В auth store при login и vk callback:
+localStorage.setItem('user', JSON.stringify({ ...userData, role: res.data.user.role }))
 </script>
 
 <template>

@@ -18,7 +18,7 @@ const router = createRouter({
     { path: '/articles', component: Articles },
     { path: '/login', component: Login },
     { path: '/register', component: Register },
-    { path: '/organizer', component: Organizer }
+    { path: '/organizer', component: Organizer },
     { path: '/auth/vk/callback', component: () => import('../views/VKCallback.vue') }
   ]
 })
