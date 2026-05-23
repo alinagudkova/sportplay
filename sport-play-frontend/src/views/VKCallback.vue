@@ -13,13 +13,19 @@ onMounted(async () => {
   const deviceId = params.get('device_id')
   const state = params.get('state')
 
-  // VK SDK сохраняет verifier в sessionStorage
-  const codeVerifier = sessionStorage.getItem('vkid_code_verifier') 
-    || localStorage.getItem('vkid_code_verifier')
-    || ''
+  // Ищем verifier который сохранили через перехват
+  let codeVerifier = ''
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith('ss_') && key.toLowerCase().includes('verif')) {
+      codeVerifier = localStorage.getItem(key) || ''
+      console.log('found verifier key:', key, 'value:', codeVerifier)
+      break
+    }
+  }
 
-  console.log('code_verifier:', codeVerifier)
-  console.log('all sessionStorage:', JSON.stringify({...sessionStorage}))
+  // Показываем всё что есть в localStorage для отладки
+  console.log('localStorage keys:', Object.keys(localStorage))
 
   if (code && deviceId) {
     try {
@@ -29,6 +35,11 @@ onMounted(async () => {
         state,
         code_verifier: codeVerifier
       })
+      // Чистим временные ключи
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('ss_'))
+        .forEach(k => localStorage.removeItem(k))
+
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('user', JSON.stringify(res.data.user))
       window.location.href = '/'

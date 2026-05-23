@@ -29,8 +29,18 @@ onMounted(() => {
       responseMode: VKID.ConfigResponseMode.Redirect,
       source: VKID.ConfigSource.LOWCODE,
       scope: '',
-      codeVerifier: false
+      codeVerifier: true
     })
+
+    // Перехватываем sessionStorage.setItem чтобы поймать verifier
+    const originalSetItem = sessionStorage.setItem.bind(sessionStorage)
+    sessionStorage.setItem = function(key, value) {
+      originalSetItem(key, value)
+      // Сохраняем всё в localStorage чтобы пережило редирект
+      localStorage.setItem('ss_' + key, value)
+      console.log('sessionStorage set:', key, value)
+    }
+
     const oneTap = new VKID.OneTap()
     oneTap.render({
       container: document.getElementById('vk-container'),
