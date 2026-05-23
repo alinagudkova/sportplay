@@ -19,16 +19,22 @@ const logout = () => {
       <span class="logo" @click="router.push('/')">Sport Play</span>
 
       <div class="links">
-        <span @click="router.push('/')">Главная</span>
-        <span @click="router.push('/articles')">Статьи</span>
-        <template v-if="token">
-          <span @click="router.push('/profile')">{{ user?.name }}</span>
-          <span class="logout" @click="logout">Выйти</span>
-        </template>
-        <template v-else>
-          <span @click="router.push('/login')">Войти</span>
-        </template>
-      </div>
+  <span @click="router.push('/')">Главная</span>
+  <span @click="router.push('/articles')">Статьи</span>
+  <template v-if="token">
+    <span 
+      v-if="user?.role === 'organizer' || user?.role === 'admin'" 
+      @click="router.push('/organizer')"
+    >
+      Панель организатора
+    </span>
+    <span @click="router.push('/profile')">{{ user?.name }}</span>
+    <span class="logout" @click="logout">Выйти</span>
+  </template>
+  <template v-else>
+    <span @click="router.push('/login')">Войти</span>
+  </template>
+</div>
     </div>
   </nav>
 </template>

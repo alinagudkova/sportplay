@@ -8,72 +8,30 @@ const jwt = require('jsonwebtoken');
 const { router: authRouter, authMiddleware } = require('./auth');
 
 const app = express();
-
 app.use(cors());
 app.use(bodyParser.json());
-
-// ===== AUTH =====
 app.use('/api/auth', authRouter);
-
-// ===== SLOTS =====
-app.get('/api/slots', async (req, res) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT s.id, s.date, s.time, h.name as hall_name,
-      GROUP_CONCAT(b.client_name SEPARATOR ', ') as booked_clients
-      FROM slots s
-      JOIN halls h ON s.hall_id = h.id
-      LEFT JOIN bookings b ON b.slot_id = s.id
-      GROUP BY s.id
-      ORDER BY s.date, s.time
-    `);
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ===== BOOK =====
-app.post('/api/book', authMiddleware, async (req, res) => {
-  const { slot_id } = req.body;
-  if (!slot_id) return res.status(400).json({ error: 'slot_id обязателен' });
-  try {
-    await db.query(
-      `INSERT INTO bookings (slot_id, user_id, client_name) VALUES (?, ?, ?)`,
-      [slot_id, req.user.id, req.user.name]
-    );
-    res.json({ message: 'Вы записаны' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // ===== SPORTS =====
 app.get('/api/sports', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM sports')
     res.json(rows)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.get('/api/sports/:id', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM sports WHERE id = ?', [req.params.id])
     res.json(rows[0])
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.get('/api/sports/:id/halls', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM halls WHERE sport_id = ?', [req.params.id])
     res.json(rows)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 // ===== HALLS =====
@@ -86,15 +44,13 @@ app.get('/api/halls/:id', async (req, res) => {
       WHERE h.id = ?
     `, [req.params.id])
     res.json(rows[0])
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.get('/api/halls/:id/slots', async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT s.*, COUNT(b.id) as booked_count, s.max_participants
+      SELECT s.*, COUNT(b.id) as booked_count, s.max_participants, s.price
       FROM slots s
       LEFT JOIN bookings b ON b.slot_id = s.id AND b.status = 'active'
       WHERE s.hall_id = ?
@@ -102,9 +58,7 @@ app.get('/api/halls/:id/slots', async (req, res) => {
       ORDER BY s.date, s.time
     `, [req.params.id])
     res.json(rows)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 app.get('/api/slots/:id/participants', async (req, res) => {
@@ -116,17 +70,109 @@ app.get('/api/slots/:id/participants', async (req, res) => {
       WHERE b.slot_id = ? AND b.status = 'active'
     `, [req.params.id])
     res.json(rows)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
-// ===== PROFILE =====
+// ===== SLOTS =====
+app.get('/api/slots', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT s.id, s.date, s.time, h.name as hall_name,
+      GROUP_CONCAT(b.client_name SEPARATOR ', ') as booked_clients
+      FROM slots s
+      JOIN halls h ON s.hall_id = h.id
+      LEFT JOIN bookings b ON b.slot_id = s.id
+      GROUP BY s.id
+      ORDER BY s.date, s.time
+    `)
+    res.json(rows)
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== BOOK =====
+app.post('/api/book', authMiddleware, async (req, res) => {
+  const { slot_id } = req.body
+  if (!slot_id) return res.status(400).json({ error: 'slot_id обязателен' })
+
+  try {
+    // Проверяем слот и его стоимость
+    const [slots] = await db.query(
+      'SELECT * FROM slots WHERE id = ?', [slot_id]
+    )
+    const slot = slots[0]
+    if (!slot) return res.status(404).json({ error: 'Слот не найден' })
+
+    // Проверяем что не записан уже
+    const [existing] = await db.query(
+      `SELECT id FROM bookings WHERE slot_id = ? AND user_id = ? AND status = 'active'`,
+      [slot_id, req.user.id]
+    )
+    if (existing.length > 0) return res.status(400).json({ error: 'Вы уже записаны' })
+
+    // Проверяем заполненность
+    const [countRes] = await db.query(
+      `SELECT COUNT(*) as cnt FROM bookings WHERE slot_id = ? AND status = 'active'`,
+      [slot_id]
+    )
+    if (countRes[0].cnt >= slot.max_participants) {
+      return res.status(400).json({ error: 'Нет свободных мест' })
+    }
+
+    // Если есть стоимость — проверяем баланс
+    if (slot.price > 0) {
+      const [users] = await db.query('SELECT balance FROM users WHERE id = ?', [req.user.id])
+      if (users[0].balance < slot.price) {
+        return res.status(400).json({ error: 'Недостаточно средств на балансе' })
+      }
+      // Списываем
+      await db.query(
+        'UPDATE users SET balance = balance - ? WHERE id = ?',
+        [slot.price, req.user.id]
+      )
+    }
+
+    await db.query(
+      `INSERT INTO bookings (slot_id, user_id, client_name) VALUES (?, ?, ?)`,
+      [slot_id, req.user.id, req.user.name]
+    )
+    res.json({ message: 'Вы записаны' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== ОТМЕНА ЗАПИСИ =====
+app.post('/api/cancel/:booking_id', authMiddleware, async (req, res) => {
+  try {
+    const [bookings] = await db.query(
+      'SELECT b.*, s.price FROM bookings b JOIN slots s ON b.slot_id = s.id WHERE b.id = ? AND b.user_id = ?',
+      [req.params.booking_id, req.user.id]
+    )
+    const booking = bookings[0]
+    if (!booking) return res.status(404).json({ error: 'Запись не найдена' })
+    if (booking.status !== 'active') return res.status(400).json({ error: 'Запись уже отменена' })
+
+    await db.query(
+      `UPDATE bookings SET status = 'cancelled' WHERE id = ?`,
+      [req.params.booking_id]
+    )
+
+    // Возвращаем деньги если была оплата
+    if (booking.price > 0) {
+      await db.query(
+        'UPDATE users SET balance = balance + ? WHERE id = ?',
+        [booking.price, req.user.id]
+      )
+    }
+
+    res.json({ message: 'Запись отменена, средства возвращены' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== ПРОФИЛЬ =====
 app.get('/api/profile', authMiddleware, async (req, res) => {
   try {
     const [bookings] = await db.query(`
       SELECT b.id, b.status, b.created_at,
-        s.date, s.time,
+        s.date, s.time, s.price,
         h.name as hall_name, h.address,
         sp.name as sport_name, sp.image_url as sport_image
       FROM bookings b
@@ -136,10 +182,154 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
       WHERE b.user_id = ?
       ORDER BY s.date DESC, s.time DESC
     `, [req.user.id])
-    res.json(bookings)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
+
+    const [users] = await db.query('SELECT balance FROM users WHERE id = ?', [req.user.id])
+
+    res.json({ bookings, balance: users[0].balance })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== БАЛАНС — пополнение организатором =====
+app.post('/api/balance/add', authMiddleware, async (req, res) => {
+  // Только организатор или админ
+  const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.id])
+  if (!['organizer', 'admin'].includes(users[0].role)) {
+    return res.status(403).json({ error: 'Нет доступа' })
   }
+
+  const { user_id, amount } = req.body
+  if (!user_id || !amount || amount <= 0) {
+    return res.status(400).json({ error: 'Неверные данные' })
+  }
+
+  try {
+    await db.query(
+      'UPDATE users SET balance = balance + ? WHERE id = ?',
+      [amount, user_id]
+    )
+    const [updated] = await db.query('SELECT id, name, balance FROM users WHERE id = ?', [user_id])
+    res.json({ message: 'Баланс пополнен', user: updated[0] })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== ПОИСК ПОЛЬЗОВАТЕЛЯ по имени/email (для организатора) =====
+app.get('/api/users/search', authMiddleware, async (req, res) => {
+  const [me] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.id])
+  if (!['organizer', 'admin'].includes(me[0].role)) {
+    return res.status(403).json({ error: 'Нет доступа' })
+  }
+
+  const { q } = req.query
+  try {
+    const [rows] = await db.query(
+      `SELECT id, name, email, balance FROM users WHERE name LIKE ? OR email LIKE ? LIMIT 10`,
+      [`%${q}%`, `%${q}%`]
+    )
+    res.json(rows)
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== ОРГАНИЗАТОР — создать зал =====
+app.post('/api/organizer/halls', authMiddleware, async (req, res) => {
+  const [me] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.id])
+  if (!['organizer', 'admin'].includes(me[0].role)) {
+    return res.status(403).json({ error: 'Нет доступа' })
+  }
+
+  const { name, address, description, sport_id, image_url } = req.body
+  try {
+    const [result] = await db.query(
+      `INSERT INTO halls (name, address, description, sport_id, image_url, organizer_id) VALUES (?, ?, ?, ?, ?, ?)`,
+      [name, address, description, sport_id, image_url || null, req.user.id]
+    )
+    res.json({ id: result.insertId, message: 'Зал создан' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== ОРГАНИЗАТОР — получить свои залы =====
+app.get('/api/organizer/halls', authMiddleware, async (req, res) => {
+  const [me] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.id])
+  if (!['organizer', 'admin'].includes(me[0].role)) {
+    return res.status(403).json({ error: 'Нет доступа' })
+  }
+
+  try {
+    const [rows] = await db.query(
+      `SELECT h.*, s.name as sport_name FROM halls h 
+       JOIN sports s ON h.sport_id = s.id
+       WHERE h.organizer_id = ?`,
+      [req.user.id]
+    )
+    res.json(rows)
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== ОРГАНИЗАТОР — создать слот =====
+app.post('/api/organizer/slots', authMiddleware, async (req, res) => {
+  const [me] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.id])
+  if (!['organizer', 'admin'].includes(me[0].role)) {
+    return res.status(403).json({ error: 'Нет доступа' })
+  }
+
+  const { hall_id, date, time, max_participants, price } = req.body
+  try {
+    const [result] = await db.query(
+      `INSERT INTO slots (hall_id, date, time, max_participants, price) VALUES (?, ?, ?, ?, ?)`,
+      [hall_id, date, time, max_participants, price || 0]
+    )
+    res.json({ id: result.insertId, message: 'Слот создан' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== ОРГАНИЗАТОР — участники слота =====
+app.get('/api/organizer/slots/:id/bookings', authMiddleware, async (req, res) => {
+  const [me] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.id])
+  if (!['organizer', 'admin'].includes(me[0].role)) {
+    return res.status(403).json({ error: 'Нет доступа' })
+  }
+
+  try {
+    const [rows] = await db.query(`
+      SELECT b.id, b.client_name, b.status, b.created_at, u.email, u.id as user_id
+      FROM bookings b
+      LEFT JOIN users u ON b.user_id = u.id
+      WHERE b.slot_id = ?
+    `, [req.params.id])
+    res.json(rows)
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== АДМИН — добавить участника вручную =====
+app.post('/api/admin/bookings', authMiddleware, async (req, res) => {
+  const [me] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.id])
+  if (!['organizer', 'admin'].includes(me[0].role)) {
+    return res.status(403).json({ error: 'Нет доступа' })
+  }
+
+  const { slot_id, client_name } = req.body
+  try {
+    await db.query(
+      `INSERT INTO bookings (slot_id, user_id, client_name, status) VALUES (?, NULL, ?, 'active')`,
+      [slot_id, client_name]
+    )
+    res.json({ message: 'Участник добавлен' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
+
+// ===== АДМИН — удалить участника =====
+app.delete('/api/admin/bookings/:id', authMiddleware, async (req, res) => {
+  const [me] = await db.query('SELECT role FROM users WHERE id = ?', [req.user.id])
+  if (!['organizer', 'admin'].includes(me[0].role)) {
+    return res.status(403).json({ error: 'Нет доступа' })
+  }
+
+  try {
+    await db.query(
+      `UPDATE bookings SET status = 'cancelled' WHERE id = ?`,
+      [req.params.id]
+    )
+    res.json({ message: 'Участник удалён' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
 })
 
 // ===== VK AUTH =====
@@ -162,22 +352,12 @@ app.post('/api/auth/vk', async (req, res) => {
 
     console.log('VK response:', JSON.stringify(response.data))
 
-    const { access_token, user_id } = response.data
+    // ИСПРАВЛЕНИЕ: берём имя из первого ответа VK
+    const { access_token, user_id, first_name, last_name } = response.data
     const vkId = String(user_id)
-
-    const userInfoRes = await axios.get('https://api.vk.com/method/users.get', {
-      params: {
-        user_ids: vkId,
-        fields: 'first_name,last_name',
-        access_token,
-        v: '5.131'
-      }
-    })
-
-    console.log('VK userInfo:', JSON.stringify(userInfoRes.data))
-
-    const vkData = userInfoRes.data.response?.[0]
-    const name = vkData ? `${vkData.first_name} ${vkData.last_name}` : 'VK пользователь'
+    const name = (first_name && last_name && first_name !== 'undefined')
+      ? `${first_name} ${last_name}`
+      : 'VK пользователь'
 
     let [users] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
     let user = users[0]
@@ -186,6 +366,10 @@ app.post('/api/auth/vk', async (req, res) => {
       await db.query('INSERT INTO users (name, vk_id) VALUES (?, ?)', [name, vkId])
       const [newUsers] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
       user = newUsers[0]
+    } else if (user.name === 'undefined undefined' || user.name === 'VK пользователь') {
+      // Исправляем имя если было сохранено неверно
+      await db.query('UPDATE users SET name = ? WHERE id = ?', [name, user.id])
+      user.name = name
     }
 
     const token = jwt.sign(
@@ -194,7 +378,7 @@ app.post('/api/auth/vk', async (req, res) => {
       { expiresIn: '7d' }
     )
 
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email } })
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } })
   } catch (err) {
     console.error('VK error:', err.response?.data || err.message)
     res.status(500).json({ error: 'Ошибка VK авторизации' })

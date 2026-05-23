@@ -6,6 +6,7 @@ import Profile from '../views/Profile.vue'
 import Articles from '../views/Articles.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
+import Organizer from '../views/Organizer.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -17,6 +18,7 @@ const router = createRouter({
     { path: '/articles', component: Articles },
     { path: '/login', component: Login },
     { path: '/register', component: Register },
+    { path: '/organizer', component: Organizer }
     { path: '/auth/vk/callback', component: () => import('../views/VKCallback.vue') }
   ]
 })

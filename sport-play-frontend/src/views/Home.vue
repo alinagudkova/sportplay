@@ -22,7 +22,7 @@ const scrollToSports = () => {
     <section class="hero">
       <div class="hero-content">
         <h1>Sport Play <span>Иркутск</span></h1>
-        <p>Записывайтесь на спортивные мероприятия</p>
+        <p>Записывайтесьь на спортивные мероприятия</p>
         <button @click="scrollToSports">Выбрать спорт</button>
       </div>
     </section>
