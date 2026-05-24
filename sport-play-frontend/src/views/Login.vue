@@ -24,13 +24,20 @@ onMounted(() => {
   if ('VKIDSDK' in window) {
     const VKID = window.VKIDSDK
 
+    // Генерируем code_verifier сами и сохраняем ДО редиректа
+    const array = new Uint8Array(32)
+    crypto.getRandomValues(array)
+    const codeVerifier = btoa(String.fromCharCode(...array))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+    localStorage.setItem('vk_code_verifier', codeVerifier)
+
     VKID.Config.init({
       app: 54575533,
       redirectUrl: 'https://sportplay.458000.ru/auth/vk/callback',
       responseMode: VKID.ConfigResponseMode.Redirect,
       source: VKID.ConfigSource.LOWCODE,
       scope: '',
-      codeVerifier: false
+      codeVerifier: codeVerifier  // передаём свой verifier в SDK
     })
 
     const oneTap = new VKID.OneTap()
