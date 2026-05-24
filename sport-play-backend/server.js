@@ -290,18 +290,19 @@ app.post('/api/auth/vk', async (req, res) => {
     )
     console.log('VK response:', JSON.stringify(response.data))
 
-    const { user_id, first_name, last_name, id_token } = response.data
+    const { user_id, id_token, access_token } = response.data
 const vkId = String(user_id)
 
 let name = 'VK пользователь'
-if (first_name && last_name && first_name !== 'undefined') {
-  name = first_name + ' ' + last_name
-} else if (id_token) {
-  try {
-    const payload = JSON.parse(Buffer.from(id_token.split('.')[1], 'base64').toString())
-    console.log('id_token payload:', JSON.stringify(payload))
-    if (payload.first_name) name = payload.first_name + ' ' + (payload.last_name || '')
-  } catch(e) { console.log('id_token decode error', e) }
+try {
+  const userInfoRes = await axios.get('https://id.vk.com/oauth2/user_info', {
+    headers: { Authorization: `Bearer ${access_token}` }
+  })
+  console.log('user_info:', JSON.stringify(userInfoRes.data))
+  const u = userInfoRes.data.user
+  if (u && u.first_name) name = u.first_name + ' ' + (u.last_name || '')
+} catch(e) {
+  console.log('user_info error:', e.message)
 }
     let [users] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
     let user = users[0]
