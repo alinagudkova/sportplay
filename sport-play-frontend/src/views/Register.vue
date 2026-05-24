@@ -20,7 +20,6 @@ const register = async () => {
     error.value = err.response?.data?.error || 'Ошибка регистрации'
   }
 }
-// ← строку с userData удали
 </script>
 
 <template>

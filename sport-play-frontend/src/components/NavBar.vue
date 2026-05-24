@@ -20,7 +20,6 @@ const logout = () => {
 
       <div class="links">
   <span @click="router.push('/')">Главная</span>
-  <span @click="router.push('/articles')">Статьи</span>
   <template v-if="token">
     <span 
       v-if="user?.role === 'organizer' || user?.role === 'admin'" 
