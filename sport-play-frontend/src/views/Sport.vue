@@ -122,10 +122,11 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-.halls h2 {
+..halls h2 {
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 30px;
+  color: #1a1a2e;
 }
 
 .halls-grid {
@@ -155,6 +156,7 @@ onMounted(async () => {
   font-size: 20px;
   font-weight: 700;
   margin-bottom: 6px;
+  color: #1a1a2e;
 }
 
 .hall-card p { color: #333; font-size: 14px; margin-top: 4px; }
