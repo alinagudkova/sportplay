@@ -23,18 +23,26 @@ onMounted(async () => {
   ])
   hall.value = hallRes.data
   slots.value = slotsRes.data
-  if (hallRes.data.latitude && hallRes.data.longitude) {
+
+  // Геокодируем адрес
+  if (hallRes.data.address && typeof ymaps !== 'undefined') {
     setTimeout(() => {
       ymaps.ready(() => {
         const map = new ymaps.Map('map', {
-          center: [hallRes.data.latitude, hallRes.data.longitude],
-          zoom: 15
+          center: [52.2978, 104.2964],
+          zoom: 14
         })
-        map.geoObjects.add(new ymaps.Placemark(
-          [hallRes.data.latitude, hallRes.data.longitude],
-          { balloonContent: hallRes.data.name },
-          { preset: 'islands#redDotIcon' }
-        ))
+        ymaps.geocode(hallRes.data.address).then(res => {
+          const obj = res.geoObjects.get(0)
+          if (obj) {
+            const coords = obj.geometry.getCoordinates()
+            map.setCenter(coords, 15)
+            map.geoObjects.add(new ymaps.Placemark(coords,
+              { balloonContent: hallRes.data.name },
+              { preset: 'islands#redDotIcon' }
+            ))
+          }
+        })
       })
     }, 500)
   }
@@ -124,10 +132,10 @@ const formatDate = (date) => new Date(date).toLocaleDateString('ru-RU', {
         <button class="book-btn" @click="bookSlot">Записаться</button>
       </section>
       <!-- КАРТА -->
-      <section class="map-section" v-if="hall.latitude && hall.longitude">
-        <h2>На карте</h2>
-        <div id="map" style="width: 100%; height: 400px; border-radius: 16px;"></div>
-      </section>
+<section class="map-section" v-if="hall.address">
+  <h2>На карте</h2>
+  <div id="map" style="width: 100%; height: 400px; border-radius: 16px;"></div>
+</section>
     </div>
 
     <!-- МОДАЛКА АВТОРИЗАЦИИ -->

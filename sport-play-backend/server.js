@@ -290,12 +290,19 @@ app.post('/api/auth/vk', async (req, res) => {
     )
     console.log('VK response:', JSON.stringify(response.data))
 
-    const { user_id, first_name, last_name } = response.data
-    const vkId = String(user_id)
-    const name = (first_name && last_name && first_name !== 'undefined')
-      ? `${first_name} ${last_name}`
-      : 'VK пользователь'
+    const { user_id, first_name, last_name, id_token } = response.data
+const vkId = String(user_id)
 
+let name = 'VK пользователь'
+if (first_name && last_name && first_name !== 'undefined') {
+  name = first_name + ' ' + last_name
+} else if (id_token) {
+  try {
+    const payload = JSON.parse(Buffer.from(id_token.split('.')[1], 'base64').toString())
+    console.log('id_token payload:', JSON.stringify(payload))
+    if (payload.first_name) name = payload.first_name + ' ' + (payload.last_name || '')
+  } catch(e) { console.log('id_token decode error', e) }
+}
     let [users] = await db.query('SELECT * FROM users WHERE vk_id = ?', [vkId])
     let user = users[0]
 
