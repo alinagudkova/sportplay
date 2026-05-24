@@ -122,7 +122,7 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-..halls h2 {
+.halls h2 {
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 30px;
