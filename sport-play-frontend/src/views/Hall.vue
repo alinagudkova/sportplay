@@ -164,7 +164,6 @@ const formatDate = (date) => new Date(date).toLocaleDateString('ru-RU', {
   left: 20px;
   padding: 10px 20px;
   background: rgba(0,0,0,0.5);
-  color: white;
   border: none;
   border-radius: 50px;
   cursor: pointer;
@@ -181,7 +180,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString('ru-RU', {
   display: flex;
   align-items: flex-end;
   padding: 40px;
-  color: white;
+  color: black;
 }
 
 .sport-tag {
@@ -209,6 +208,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString('ru-RU', {
   max-width: 900px;
   margin: 0 auto;
   padding: 40px;
+  color: black;
 }
 
 .slots h2, .slot-detail h2 {
@@ -225,6 +225,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString('ru-RU', {
 
 .slot-card {
   background: white;
+  color: black;
   border-radius: 16px;
   padding: 20px;
   cursor: pointer;
@@ -237,9 +238,9 @@ const formatDate = (date) => new Date(date).toLocaleDateString('ru-RU', {
 .slot-card:hover { transform: translateY(-4px); }
 .slot-card.active { border-color: #e94560; }
 
-.slot-date { font-size: 13px; color: #666; margin-bottom: 6px; }
-.slot-time { font-size: 28px; font-weight: 800; color: #1a1a2e; }
-.slot-spots { font-size: 13px; color: #999; margin-top: 6px; }
+.slot-date { font-size: 13px; color: #333; margin-bottom: 6px; }
+.slot-spots { font-size: 13px; color: #444; margin-top: 6px; }
+.slot-spots { font-size: 13px; color: #444; margin-top: 6px; }
 
 .slot-detail {
   margin-top: 40px;
@@ -307,7 +308,10 @@ const formatDate = (date) => new Date(date).toLocaleDateString('ru-RU', {
   width: 360px;
 }
 
-.modal h2 { font-size: 22px; margin-bottom: 20px; }
+.modal h2 { font-size: 22px; 
+  margin-bottom: 20px; 
+  color: black;
+}
 
 .modal button {
   width: 100%;
@@ -324,7 +328,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString('ru-RU', {
 
 .modal .secondary {
   background: #f5f5f5;
-  color: #333;
+  color: black;;
 }
 
 .loading {

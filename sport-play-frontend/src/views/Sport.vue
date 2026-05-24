@@ -157,11 +157,7 @@ onMounted(async () => {
   margin-bottom: 6px;
 }
 
-.hall-card p {
-  color: #666;
-  font-size: 14px;
-  margin-top: 4px;
-}
+.hall-card p { color: #333; font-size: 14px; margin-top: 4px; }
 
 .desc {
   margin-top: 8px !important;
