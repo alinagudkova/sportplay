@@ -23,6 +23,15 @@ const login = async () => {
 onMounted(() => {
   if ('VKIDSDK' in window) {
     const VKID = window.VKIDSDK
+
+    // Перехват ДОЛЖЕН быть ДО Config.init
+    const originalSetItem = sessionStorage.setItem.bind(sessionStorage)
+    sessionStorage.setItem = function(key, value) {
+      originalSetItem(key, value)
+      localStorage.setItem('vk_ss_' + key, value)
+      console.log('sessionStorage set:', key, '=', value)
+    }
+
     VKID.Config.init({
       app: 54575533,
       redirectUrl: 'https://sportplay.458000.ru/auth/vk/callback',
@@ -31,15 +40,6 @@ onMounted(() => {
       scope: '',
       codeVerifier: true
     })
-
-    // Перехватываем sessionStorage.setItem чтобы поймать verifier
-    const originalSetItem = sessionStorage.setItem.bind(sessionStorage)
-    sessionStorage.setItem = function(key, value) {
-      originalSetItem(key, value)
-      // Сохраняем всё в localStorage чтобы пережило редирект
-      localStorage.setItem('ss_' + key, value)
-      console.log('sessionStorage set:', key, value)
-    }
 
     const oneTap = new VKID.OneTap()
     oneTap.render({
