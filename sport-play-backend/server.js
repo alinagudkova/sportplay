@@ -259,6 +259,37 @@ app.post('/api/auth/vk', async (req, res) => {
     res.status(500).json({ error: 'Ошибка VK авторизации' })
   }
 })
+// ===== РЕЙТИНГ =====
+app.get('/api/halls/:id/rating', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM ratings WHERE hall_id = ?',
+      [req.params.id]
+    )
+    const [reviews] = await db.query(
+      `SELECT r.rating, r.comment, r.created_at, u.name as user_name 
+       FROM ratings r JOIN users u ON r.user_id = u.id 
+       WHERE r.hall_id = ? ORDER BY r.created_at DESC`,
+      [req.params.id]
+    )
+    res.json({ avg: rows[0].avg_rating, count: rows[0].count, reviews })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
 
+app.post('/api/halls/:id/rating', authMiddleware, async (req, res) => {
+  const { rating, comment } = req.body
+  if (!rating || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: 'Оценка от 1 до 5' })
+  }
+  try {
+    await db.query(
+      `INSERT INTO ratings (hall_id, user_id, rating, comment) 
+       VALUES (?, ?, ?, ?) 
+       ON DUPLICATE KEY UPDATE rating = ?, comment = ?`,
+      [req.params.id, req.user.id, rating, comment, rating, comment]
+    )
+    res.json({ message: 'Оценка сохранена' })
+  } catch (err) { res.status(500).json({ error: err.message }) }
+})
 const PORT = 3000;
 app.listen(PORT, () => console.log('Server running on port ' + PORT));
